@@ -14,6 +14,7 @@ import { MAX_TILES, WIDGET_KEY } from '../src/widgets.js';
 import {
   HOUR,
   MINUTE,
+  MADRID,
   ROME,
   createAll,
   createClock,
@@ -304,4 +305,60 @@ test('the widget: the cheapest by default, a station, the other country; always 
   // The station widget shows the name given in Gladys.
   assert.match(textsOf(contents[2]), new RegExp(station.name.slice(0, 10)));
   assert.equal(contents[3].components[0].type, 'text');
+});
+
+test('another place: the cheapest price of before is not a drop', async (t) => {
+  const world = await createWorld({ config: { ...ES, radius_km: 1 } });
+  t.after(() => world.app.stop());
+  await createAll(world, 1);
+  // A wider radius finds cheaper stations: remembered, not fired.
+  await world.fake.configUpdated({ ...ES, radius_km: 3 });
+  world.clock.advance(30 * MINUTE);
+  await world.app.tick();
+  assert.deepEqual(world.fake.sceneEvents, []);
+});
+
+test('a configuration changed during a read: its result is dropped, the new country read', async (t) => {
+  const sources = createFakeSources();
+  const real = sources.fetch;
+  let hold = false;
+  let release;
+  sources.fetch = async (url, init) => {
+    if (hold && url === ALL_URL) {
+      await new Promise((resolve) => (release = resolve));
+    }
+    return real(url, init);
+  };
+  const world = await createWorld({ config: ES, sources, houses: [house(ROME)] });
+  t.after(() => world.app.stop());
+  hold = true;
+  world.clock.advance(FULL_READ_MS);
+  const reading = world.app.tick();
+  await new Promise((resolve) => setImmediate(resolve));
+  const updating = world.fake.configUpdated(IT);
+  release();
+  await Promise.all([reading, updating]);
+  assert.equal(world.app.snapshot.country, 'it');
+  assert.ok([...world.app.snapshot.stations.keys()].every((k) => k.startsWith('it-')));
+  const best = cheapestIds(world.gladys, 'es');
+  assert.ok(world.fake.states.every((s) => !s.device_feature_external_id.startsWith(best.device)));
+});
+
+test('Spain: an empty list is a failure, not a country without stations', async (t) => {
+  const sources = createFakeSources();
+  sources.es.ListaEESSPrecio = [];
+  const world = await createWorld({ config: ES, sources });
+  t.after(() => world.app.stop());
+  assert.equal(world.fake.connectionStatus.connected, false);
+});
+
+test('a house located in Gladys after the start is used within the hour', async (t) => {
+  const world = await createWorld({ config: ES, houses: [] });
+  t.after(() => world.app.stop());
+  assert.equal(world.app.home, null);
+  world.fake.houses.push(house(MADRID));
+  world.clock.advance(HOUR);
+  await world.app.tick();
+  assert.deepEqual(world.app.home, { lat: 40.4168, lon: -3.7038 });
+  assert.ok(world.fake.discoveredDevices.length > 1);
 });

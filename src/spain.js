@@ -117,7 +117,12 @@ export async function readList(fetchImpl, url, select) {
  */
 export async function readSpain(fetchImpl, { select, provinces }) {
   if (!provinces) {
-    const { stations, updated } = await readList(fetchImpl, ALL_URL, select);
+    const { stations, updated, count } = await readList(fetchImpl, ALL_URL, select);
+    // The Ministry sometimes answers an empty list when degraded: never
+    // taken for a country without stations (nor its provinces for a day).
+    if (count === 0) {
+      throw new SourceError('Ministry answered an empty list of stations');
+    }
     return {
       stations,
       updated,

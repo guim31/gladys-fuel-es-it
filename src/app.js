@@ -48,6 +48,8 @@ export const REFRESH_MS = { es: 30 * MINUTE_MS, it: 2 * HOUR_MS };
 export const FULL_READ_MS = 24 * HOUR_MS;
 export const FAILURE_RETRY_MS = 30 * MINUTE_MS;
 export const HEARTBEAT_MS = 12 * HOUR_MS;
+/** The house of Gladys is read again every hour (no update event). */
+export const LOCATE_MS = HOUR_MS;
 /** The discovery list: the nearest stations, then the municipality's. */
 export const MAX_DISCOVERED = 50;
 
@@ -76,7 +78,7 @@ export function registerHandlers(
   /** The first located house: { lat, lon } or null. */
   let home = null;
   /** What /data keeps: the last price seen per device and fuel (the trigger). */
-  let persisted = { prices: {} };
+  let persisted = { place: null, prices: {} };
   /** The selected stations of the last read, by key, and the list's date. */
   let snapshot = null;
   /** The place and country of the last read: another one reads everything again. */
@@ -87,6 +89,8 @@ export function registerHandlers(
   let fullReadAt = -Infinity;
   let italyCache = null;
   let lastStatus = null;
+  let locatedAt = -Infinity;
+  let located = false;
   let firstRead = true;
   const delisted = new Set();
   let timer = null;
@@ -97,7 +101,10 @@ export function registerHandlers(
   const gladysIssues = createIssueLog(logger);
 
   const ready = store.load().then((data) => {
-    persisted = { prices: data.prices && typeof data.prices === 'object' ? data.prices : {} };
+    persisted = {
+      place: typeof data.place === 'string' ? data.place : null,
+      prices: data.prices && typeof data.prices === 'object' ? data.prices : {},
+    };
   });
 
   // --- What is followed -------------------------------------------------------
@@ -141,6 +148,7 @@ export function registerHandlers(
   async function refresh() {
     attemptAt = now();
     const key = placeKey();
+    const country = config.country;
     if (key !== readKey) {
       provinces = null;
       italyCache = null;
@@ -154,7 +162,7 @@ export function registerHandlers(
     try {
       let result;
       let full = false;
-      if (config.country === 'es') {
+      if (country === 'es') {
         full = provinces === null || now() - fullReadAt >= FULL_READ_MS;
         result = await readSpain(fetchImpl, { select, provinces: full ? null : provinces });
         if (full) {
@@ -168,6 +176,11 @@ export function registerHandlers(
         full = result.changed;
         italyCache = result.cache;
       }
+      // The configuration changed during the read: its result belongs to
+      // the previous place, the forced tick of the new one reads again.
+      if (placeKey() !== key) {
+        return false;
+      }
       failure = null;
       readIssues.ok('read', 'The official price list answers again');
       const fresh = readKey !== key;
@@ -176,7 +189,8 @@ export function registerHandlers(
         return false;
       }
       snapshot = {
-        country: config.country,
+        country,
+        place: key,
         stations: new Map(result.stations.map((s) => [s.key, s])),
         updated: result.updated,
       };
@@ -195,6 +209,10 @@ export function registerHandlers(
     } catch (err) {
       const error = err instanceof SourceError ? err : new SourceError(err.message);
       failure = { retryAt: attemptAt + FAILURE_RETRY_MS, error };
+      // Never the stations of another place under the new configuration.
+      if (snapshot && snapshot.place !== placeKey()) {
+        snapshot = null;
+      }
       readIssues.fail('read', `The official price list cannot be read: ${error.message}`);
       return false;
     }
@@ -279,6 +297,9 @@ export function registerHandlers(
    */
   function drops() {
     const events = [];
+    // Another place or country: the cheapest of before is not comparable,
+    // and a month-old price of a station neither. Remembered, not fired.
+    const comparable = persisted.place === placeKey();
     const seen = {};
     for (const { device, prices } of currentPrices()) {
       const before = persisted.prices[device.external_id] ?? {};
@@ -286,7 +307,7 @@ export function registerHandlers(
       for (const [fuel, { price, station }] of Object.entries(prices)) {
         seen[device.external_id][fuel] = price;
         const previous = before[fuel];
-        if (typeof previous === 'number' && price < previous - 1e-9) {
+        if (comparable && typeof previous === 'number' && price < previous - 1e-9) {
           events.push({
             device: device.external_id,
             fuel,
@@ -299,15 +320,15 @@ export function registerHandlers(
         }
       }
     }
-    // Devices gone, or of the other country: kept as they were.
-    const prices = { ...persisted.prices, ...seen };
+    // Devices of the other country: forgotten with the place.
+    const prices = comparable ? { ...persisted.prices, ...seen } : seen;
     for (const id of Object.keys(prices)) {
       if (!(gladys.devices ?? []).some((device) => device.external_id === id)) {
         delete prices[id];
       }
     }
-    if (JSON.stringify(prices) !== JSON.stringify(persisted.prices)) {
-      persisted.prices = prices;
+    if (!comparable || JSON.stringify(prices) !== JSON.stringify(persisted.prices)) {
+      persisted = { place: placeKey(), prices };
       store.save(persisted);
     }
     return events;
@@ -405,6 +426,10 @@ export function registerHandlers(
         logger.debug('Gladys unreachable: tick skipped');
         return;
       }
+      // The house may have been located or moved in Gladys since.
+      if (now() - locatedAt >= LOCATE_MS) {
+        await locate();
+      }
       let read = false;
       if ((force && (hasPlace() || keptStations().size > 0)) || now() >= nextReadAt()) {
         read = await refresh();
@@ -439,19 +464,27 @@ export function registerHandlers(
     }, TICK_MS);
   }
 
+  /** The first located house of Gladys; a change is logged once. */
   async function locate() {
+    locatedAt = now();
+    let found;
     try {
       const house = (await gladys.getHouses()).find(
         (h) => typeof h.latitude === 'number' && typeof h.longitude === 'number',
       );
-      home = house ? { lat: house.latitude, lon: house.longitude } : null;
-      if (!house) {
-        logger.info('No located house in Gladys: the municipality only');
-      }
+      found = house ? { lat: house.latitude, lon: house.longitude } : null;
+      gladysIssues.ok('houses', 'Houses of Gladys readable again');
     } catch (err) {
-      home = null;
-      logger.warn(`Houses of Gladys not readable (${err.message}): the municipality only`);
+      gladysIssues.fail('houses', `Houses of Gladys not readable (${err.message})`);
+      return;
     }
+    if (!located || JSON.stringify(found) !== JSON.stringify(home)) {
+      logger.info(
+        found ? 'House located in Gladys' : 'No located house in Gladys: the municipality only',
+      );
+    }
+    located = true;
+    home = found;
   }
 
   /** (Re)start: locate the house, publish the cheapest device, read, then tick. */
@@ -491,7 +524,7 @@ export function registerHandlers(
   gladys.onAction(ACTION_KEY, async () => {
     logger.info('Action: test the official price list');
     await locate();
-    if (!hasPlace()) {
+    if (!hasPlace() && keptStations().size === 0) {
       throw new Error(pick(TEXT.noPlace, config.language));
     }
     failure = null;

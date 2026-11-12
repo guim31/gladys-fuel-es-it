@@ -131,11 +131,11 @@ export const formatKm = (value, language) =>
 
 /**
  * A local date and time of a source ("2026-11-12T22:20", the country's
- * time), or a day ("2026-11-11"), in the language: "12/11/2026 22:20".
+ * time), or a day ("2026-11-11"), in the language: "12 nov. 2026 22:20", "Nov 12, 2026 22:20".
  */
 export function formatLocal(value, language) {
   const [day, time] = String(value).split('T');
-  const date = new Intl.DateTimeFormat(language, { dateStyle: 'short', timeZone: 'UTC' }).format(
+  const date = new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeZone: 'UTC' }).format(
     new Date(`${day}T00:00:00Z`),
   );
   return time ? `${date} ${time}` : date;

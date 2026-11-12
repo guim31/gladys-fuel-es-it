@@ -84,7 +84,7 @@ test('Spain: states of a station and of the cheapest device; a members-only stat
       assert.equal(world.fake.lastState(ids.feature(`${fuel}_price`)), station.prices[fuel]);
     }
   }
-  assert.equal(world.fake.lastState(ids.feature('updated')), '12/11/2026 22:20');
+  assert.equal(world.fake.lastState(ids.feature('updated')), '12 nov. 2026 22:20');
   assert.equal(world.fake.lastState(ids.feature('hours')), station.hours);
   // The cheapest diesel within 3 km.
   const all = [...world.app.snapshot.stations.values()].filter((s) => s.nearby);
@@ -219,7 +219,7 @@ test('Italy: a municipality without a located house (Milan): the cheapest withou
   assert.match(world.fake.lastState(best.feature('benzina_self_station')), /, MILANO$/);
   assert.equal(world.fake.lastState(best.feature('benzina_self_distance')), undefined);
   const content = await widget(world);
-  assert.match(textsOf(content), /milano · 11\/11\/2026/);
+  assert.match(textsOf(content), /milano · 11 nov. 2026/);
 });
 
 test('a municipality without any station: listed nothing, said by the action', async (t) => {
@@ -300,7 +300,7 @@ test('the widget: the cheapest by default, a station, the other country; always 
   }
   assert.ok(contents[0].components.some((c) => c.type === 'status'));
   assert.ok(!contents[1].components.some((c) => c.type === 'status'));
-  assert.match(textsOf(contents[0]), /Dans un rayon de 3 km · 12\/11\/2026 22:20/);
+  assert.match(textsOf(contents[0]), /Dans un rayon de 3 km · 12 nov. 2026 22:20/);
   // The station widget shows the name given in Gladys.
   assert.match(textsOf(contents[2]), new RegExp(station.name.slice(0, 10)));
   assert.equal(contents[3].components[0].type, 'text');

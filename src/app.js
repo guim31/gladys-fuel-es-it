@@ -179,6 +179,9 @@ export function registerHandlers(
       // The configuration changed during the read: its result belongs to
       // the previous place, the forced tick of the new one reads again.
       if (placeKey() !== key) {
+        provinces = null;
+        italyCache = null;
+        fullReadAt = -Infinity;
         return false;
       }
       failure = null;
@@ -237,7 +240,7 @@ export function registerHandlers(
     if (hasPlace()) {
       devices.push(buildCheapestDevice(gladys, config));
     }
-    if (!snapshot || snapshot.country !== config.country) {
+    if (!snapshot || snapshot.place !== placeKey()) {
       return devices;
     }
     const stations = [...snapshot.stations.values()];
@@ -269,7 +272,7 @@ export function registerHandlers(
 
   /** Current prices of each device added: [{ device, prices: { fuel: { price, station } } }]. */
   function currentPrices() {
-    if (!snapshot || snapshot.country !== config.country) {
+    if (!snapshot || snapshot.place !== placeKey()) {
       return [];
     }
     const best = cheapest();
@@ -350,7 +353,7 @@ export function registerHandlers(
   }
 
   async function publishStates() {
-    if (!snapshot || snapshot.country !== config.country) {
+    if (!snapshot || snapshot.place !== placeKey()) {
       return;
     }
     const states = created().flatMap(({ kind, key }) => {

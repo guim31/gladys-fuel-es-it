@@ -30,6 +30,13 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+The integration stores under `/data` only the last price seen per device and fuel (for the price
+drop trigger): no secret, no personal data. It reads the coordinates of the Gladys house
+(`location: true`) to measure distances in the container; they are never sent anywhere nor
+written to the logs. The container only makes outgoing HTTPS requests to
+`sedeaplicaciones.minetur.gob.es` (Spain) and `www.mimit.gov.it` (Italy), without credentials, and
+listens on no port.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
 and the third-party services and devices the integration talks to.

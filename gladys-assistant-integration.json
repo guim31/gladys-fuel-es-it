@@ -1,177 +1,603 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Fuel prices Spain & Italy",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Fuel prices at the stations of Spain and Italy, from the official open data, without account.",
+    "fr": "Prix des carburants des stations d’Espagne et d’Italie, données ouvertes officielles, sans compte.",
+    "de": "Kraftstoffpreise der Tankstellen in Spanien und Italien, aus offenen amtlichen Daten, ohne Konto.",
+    "es": "Precios de carburantes en gasolineras de España e Italia, datos abiertos oficiales, sin cuenta."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-fuel-es-it:1.0.0",
+  "gladys_version": ">=5.3.0",
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-fuel-es-it/main/cover.png",
+  "categories": ["transport", "energy"],
+  "countries": ["ES", "IT"],
+  "transports": ["cloud"],
+  "location": true,
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Official open data",
+        "fr": "Données ouvertes officielles",
+        "de": "Offene amtliche Daten",
+        "es": "Datos abiertos oficiales"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Spain: the Ministry’s list, updated every 30 minutes. Italy: the MIMIT files, once a day (prices of the day before). The stations are searched around the house located in Gladys and/or in a municipality. Not affiliated with either ministry.",
+        "fr": "Espagne : la liste du ministère, mise à jour toutes les 30 minutes. Italie : les fichiers du MIMIT, une fois par jour (prix de la veille). Les stations sont cherchées autour de la maison placée dans Gladys et/ou dans une commune. Sans lien avec ces ministères.",
+        "de": "Spanien: die Liste des Ministeriums, alle 30 Minuten aktualisiert. Italien: die Dateien des MIMIT, einmal am Tag (Preise vom Vortag). Die Tankstellen werden um das in Gladys verortete Haus und/oder in einer Gemeinde gesucht. Nicht mit diesen Ministerien verbunden.",
+        "es": "España: la lista del Ministerio, actualizada cada 30 minutos. Italia: los archivos del MIMIT, una vez al día (precios del día anterior). Las gasolineras se buscan alrededor de la casa ubicada en Gladys y/o en un municipio. Sin relación con estos ministerios."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://geoportalgasolineras.es/",
+          "label": {
+            "en": "Geoportal of fuel stations (Spain)",
+            "fr": "Géoportail des stations (Espagne)",
+            "de": "Geoportal der Tankstellen (Spanien)",
+            "es": "Geoportal Gasolineras (España)"
+          }
+        },
+        {
+          "url": "https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti",
+          "label": {
+            "en": "MIMIT open data (Italy)",
+            "fr": "Données ouvertes du MIMIT (Italie)",
+            "de": "Offene Daten des MIMIT (Italien)",
+            "es": "Datos abiertos del MIMIT (Italia)"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
-    },
-    {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
+      "key": "country",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
+      "label": {
+        "en": "Country",
+        "fr": "Pays",
+        "de": "Land",
+        "es": "País"
+      },
+      "description": {
+        "en": "The country of the stations followed.",
+        "fr": "Le pays des stations suivies.",
+        "de": "Das Land der verfolgten Tankstellen.",
+        "es": "El país de las gasolineras seguidas."
+      },
+      "required": true,
+      "default": "es",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "es",
+          "label": {
+            "en": "Spain",
+            "fr": "Espagne",
+            "de": "Spanien",
+            "es": "España"
+          }
+        },
+        {
+          "value": "it",
+          "label": {
+            "en": "Italy",
+            "fr": "Italie",
+            "de": "Italien",
+            "es": "Italia"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "fuels",
+      "type": "multi_select",
+      "label": {
+        "en": "Fuels to follow",
+        "fr": "Carburants à suivre",
+        "de": "Verfolgte Kraftstoffe",
+        "es": "Carburantes a seguir"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Only the fuels of the chosen country are used. Italy: self-service and served prices apart.",
+        "fr": "Seuls les carburants du pays choisi sont utilisés. Italie : prix en libre-service et servi séparés.",
+        "de": "Nur die Kraftstoffe des gewählten Landes zählen. Italien: SB- und Bedienpreise getrennt.",
+        "es": "Solo se usan los carburantes del país elegido. Italia: precios de autoservicio y atendidos por separado."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": ["gasolina_95", "gasoleo_a", "benzina_self", "gasolio_self"],
+      "options": [
+        {
+          "value": "gasolina_95",
+          "label": {
+            "en": "Unleaded 95 (Spain)",
+            "fr": "Sans plomb 95 (Espagne)",
+            "de": "Super 95 (Spanien)",
+            "es": "Gasolina 95 (España)"
+          }
+        },
+        {
+          "value": "gasolina_98",
+          "label": {
+            "en": "Unleaded 98 (Spain)",
+            "fr": "Sans plomb 98 (Espagne)",
+            "de": "Super Plus 98 (Spanien)",
+            "es": "Gasolina 98 (España)"
+          }
+        },
+        {
+          "value": "gasoleo_a",
+          "label": {
+            "en": "Diesel (Spain)",
+            "fr": "Gazole (Espagne)",
+            "de": "Diesel (Spanien)",
+            "es": "Gasóleo A (España)"
+          }
+        },
+        {
+          "value": "gasoleo_premium",
+          "label": {
+            "en": "Premium diesel (Spain)",
+            "fr": "Gazole premium (Espagne)",
+            "de": "Premium-Diesel (Spanien)",
+            "es": "Gasóleo Premium (España)"
+          }
+        },
+        {
+          "value": "glp",
+          "label": {
+            "en": "LPG (Spain)",
+            "fr": "GPL (Espagne)",
+            "de": "Autogas (Spanien)",
+            "es": "GLP (España)"
+          }
+        },
+        {
+          "value": "benzina_self",
+          "label": {
+            "en": "Petrol, self-service (Italy)",
+            "fr": "Essence, libre-service (Italie)",
+            "de": "Benzin, SB (Italien)",
+            "es": "Gasolina, autoservicio (Italia)"
+          }
+        },
+        {
+          "value": "benzina_served",
+          "label": {
+            "en": "Petrol, served (Italy)",
+            "fr": "Essence, servie (Italie)",
+            "de": "Benzin, bedient (Italien)",
+            "es": "Gasolina, atendida (Italia)"
+          }
+        },
+        {
+          "value": "gasolio_self",
+          "label": {
+            "en": "Diesel, self-service (Italy)",
+            "fr": "Gazole, libre-service (Italie)",
+            "de": "Diesel, SB (Italien)",
+            "es": "Gasóleo, autoservicio (Italia)"
+          }
+        },
+        {
+          "value": "gasolio_served",
+          "label": {
+            "en": "Diesel, served (Italy)",
+            "fr": "Gazole, servi (Italie)",
+            "de": "Diesel, bedient (Italien)",
+            "es": "Gasóleo, atendido (Italia)"
+          }
+        },
+        {
+          "value": "gpl",
+          "label": {
+            "en": "LPG (Italy)",
+            "fr": "GPL (Italie)",
+            "de": "Autogas (Italien)",
+            "es": "GLP (Italia)"
+          }
+        },
+        {
+          "value": "metano",
+          "label": {
+            "en": "Methane (CNG) (Italy)",
+            "fr": "Méthane (GNV) (Italie)",
+            "de": "Erdgas (CNG) (Italien)",
+            "es": "Metano (GNC) (Italia)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "radius_km",
+      "type": "number",
+      "label": {
+        "en": "Search radius (km)",
+        "fr": "Rayon de recherche (km)",
+        "de": "Suchradius (km)",
+        "es": "Radio de búsqueda (km)"
+      },
+      "description": {
+        "en": "Around the house located in Gladys: the stations listed in Discovery and the cheapest price.",
+        "fr": "Autour de la maison placée dans Gladys : les stations listées dans Découverte et le prix le plus bas.",
+        "de": "Um das in Gladys verortete Haus: die in der Erkennung gelisteten Tankstellen und der niedrigste Preis.",
+        "es": "Alrededor de la casa ubicada en Gladys: las gasolineras listadas en Descubrimiento y el precio más bajo."
+      },
+      "required": false,
+      "default": 5,
+      "min": 1,
+      "max": 30
+    },
+    {
+      "key": "town",
+      "type": "string",
+      "label": {
+        "en": "Municipality (optional)",
+        "fr": "Commune (facultatif)",
+        "de": "Gemeinde (optional)",
+        "es": "Municipio (opcional)"
+      },
+      "description": {
+        "en": "Its stations are listed too. Without a located house, the cheapest price is searched there.",
+        "fr": "Ses stations sont aussi listées. Sans maison placée, le prix le plus bas y est cherché.",
+        "de": "Die Tankstellen dort werden auch gelistet. Ohne verortetes Haus wird dort der niedrigste Preis gesucht.",
+        "es": "Sus gasolineras también se listan. Sin casa ubicada, el precio más bajo se busca allí."
+      },
+      "placeholder": {
+        "en": "e.g. Madrid, Roma",
+        "fr": "ex. Madrid, Roma",
+        "de": "z. B. Madrid, Roma",
+        "es": "p. ej. Madrid, Roma"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names",
+        "fr": "Langue des noms",
+        "de": "Sprache der Namen",
+        "es": "Idioma de los nombres"
+      },
+      "description": {
+        "en": "Names of the devices and features (frozen when a device is added), dates and trigger texts.",
+        "fr": "Noms des appareils et fonctionnalités (figés à l’ajout d’un appareil), dates et textes du déclencheur.",
+        "de": "Namen der Geräte und Funktionen (beim Hinzufügen festgelegt), Daten und Texte des Auslösers.",
+        "es": "Nombres de dispositivos y funciones (fijados al añadir un dispositivo), fechas y textos del disparador."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "English",
+            "de": "English",
+            "es": "English"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "Français",
+            "fr": "Français",
+            "de": "Français",
+            "es": "Français"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "Deutsch",
+            "fr": "Deutsch",
+            "de": "Deutsch",
+            "es": "Deutsch"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Español",
+            "fr": "Español",
+            "de": "Español",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_source",
+      "label": {
+        "en": "Test the official price list",
+        "fr": "Tester la liste officielle des prix",
+        "de": "Offizielle Preisliste testen",
+        "es": "Probar la lista oficial de precios"
+      },
+      "description": {
+        "en": "Reads the list now and says how many stations are found, and the cheapest price.",
+        "fr": "Lit la liste tout de suite, et donne le nombre de stations trouvées et le prix le plus bas.",
+        "de": "Liest die Liste sofort und nennt die Zahl der gefundenen Tankstellen und den niedrigsten Preis.",
+        "es": "Lee la lista ahora e indica cuántas gasolineras se encuentran y el precio más bajo."
+      },
+      "timeout_seconds": 120
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "price_drop",
+      "label": {
+        "en": "Fuel price drop",
+        "fr": "Baisse du prix d’un carburant",
+        "de": "Kraftstoffpreis gesunken",
+        "es": "Bajada del precio de un carburante"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A price falls on a station added in Gladys, or on the cheapest device. A threshold is a plain scene on the price feature.",
+        "fr": "Un prix baisse sur une station ajoutée dans Gladys, ou sur l’appareil du moins cher. Un seuil se fait par une scène sur la fonctionnalité de prix.",
+        "de": "Ein Preis sinkt bei einer in Gladys hinzugefügten Tankstelle oder beim Gerät des günstigsten Preises. Eine Schwelle geht per Szene auf der Preisfunktion.",
+        "es": "Un precio baja en una gasolinera añadida en Gladys, o en el dispositivo del más barato. Un umbral se hace con una escena sobre la función de precio."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Station or cheapest device",
+            "fr": "Station ou appareil du moins cher",
+            "de": "Tankstelle oder Gerät des günstigsten Preises",
+            "es": "Gasolinera o dispositivo del más barato"
+          },
+          "description": {
+            "en": "Leave empty for any device.",
+            "fr": "Laisser vide pour tout appareil.",
+            "de": "Leer lassen für jedes Gerät.",
+            "es": "Deje vacío para cualquier dispositivo."
+          }
         },
         {
-          "key": "target",
+          "key": "fuel",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Fuels",
+            "fr": "Carburants",
+            "de": "Kraftstoffe",
+            "es": "Carburantes"
+          },
+          "description": {
+            "en": "Leave empty for any fuel.",
+            "fr": "Laisser vide pour tout carburant.",
+            "de": "Leer lassen für jeden Kraftstoff.",
+            "es": "Deje vacío para cualquier carburante."
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "gasolina_95",
+              "label": {
+                "en": "Unleaded 95 (Spain)",
+                "fr": "Sans plomb 95 (Espagne)",
+                "de": "Super 95 (Spanien)",
+                "es": "Gasolina 95 (España)"
+              }
+            },
+            {
+              "value": "gasolina_98",
+              "label": {
+                "en": "Unleaded 98 (Spain)",
+                "fr": "Sans plomb 98 (Espagne)",
+                "de": "Super Plus 98 (Spanien)",
+                "es": "Gasolina 98 (España)"
+              }
+            },
+            {
+              "value": "gasoleo_a",
+              "label": {
+                "en": "Diesel (Spain)",
+                "fr": "Gazole (Espagne)",
+                "de": "Diesel (Spanien)",
+                "es": "Gasóleo A (España)"
+              }
+            },
+            {
+              "value": "gasoleo_premium",
+              "label": {
+                "en": "Premium diesel (Spain)",
+                "fr": "Gazole premium (Espagne)",
+                "de": "Premium-Diesel (Spanien)",
+                "es": "Gasóleo Premium (España)"
+              }
+            },
+            {
+              "value": "glp",
+              "label": {
+                "en": "LPG (Spain)",
+                "fr": "GPL (Espagne)",
+                "de": "Autogas (Spanien)",
+                "es": "GLP (España)"
+              }
+            },
+            {
+              "value": "benzina_self",
+              "label": {
+                "en": "Petrol, self-service (Italy)",
+                "fr": "Essence, libre-service (Italie)",
+                "de": "Benzin, SB (Italien)",
+                "es": "Gasolina, autoservicio (Italia)"
+              }
+            },
+            {
+              "value": "benzina_served",
+              "label": {
+                "en": "Petrol, served (Italy)",
+                "fr": "Essence, servie (Italie)",
+                "de": "Benzin, bedient (Italien)",
+                "es": "Gasolina, atendida (Italia)"
+              }
+            },
+            {
+              "value": "gasolio_self",
+              "label": {
+                "en": "Diesel, self-service (Italy)",
+                "fr": "Gazole, libre-service (Italie)",
+                "de": "Diesel, SB (Italien)",
+                "es": "Gasóleo, autoservicio (Italia)"
+              }
+            },
+            {
+              "value": "gasolio_served",
+              "label": {
+                "en": "Diesel, served (Italy)",
+                "fr": "Gazole, servi (Italie)",
+                "de": "Diesel, bedient (Italien)",
+                "es": "Gasóleo, atendido (Italia)"
+              }
+            },
+            {
+              "value": "gpl",
+              "label": {
+                "en": "LPG (Italy)",
+                "fr": "GPL (Italie)",
+                "de": "Autogas (Italien)",
+                "es": "GLP (Italia)"
+              }
+            },
+            {
+              "value": "metano",
+              "label": {
+                "en": "Methane (CNG) (Italy)",
+                "fr": "Méthane (GNV) (Italie)",
+                "de": "Erdgas (CNG) (Italien)",
+                "es": "Metano (GNC) (Italia)"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "fuel",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
-        }
-      ]
-    }
-  ],
-  "scene_actions": [
-    {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
-      },
-      "timeout_seconds": 15,
-      "fields": [
+          "label": {
+            "en": "Fuel key",
+            "fr": "Clé du carburant",
+            "de": "Kraftstoffschlüssel",
+            "es": "Clave del carburante"
+          }
+        },
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ],
-      "outputs": [
+          "key": "fuel_name",
+          "type": "string",
+          "label": {
+            "en": "Fuel",
+            "fr": "Carburant",
+            "de": "Kraftstoff",
+            "es": "Carburante"
+          }
+        },
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station",
+            "fr": "Station",
+            "de": "Tankstelle",
+            "es": "Gasolinera"
+          }
+        },
+        {
+          "key": "price",
+          "type": "number",
+          "label": {
+            "en": "New price (€)",
+            "fr": "Nouveau prix (€)",
+            "de": "Neuer Preis (€)",
+            "es": "Nuevo precio (€)"
+          }
+        },
+        {
+          "key": "previous_price",
+          "type": "number",
+          "label": {
+            "en": "Previous price (€)",
+            "fr": "Prix précédent (€)",
+            "de": "Vorheriger Preis (€)",
+            "es": "Precio anterior (€)"
+          }
+        },
+        {
+          "key": "drop",
+          "type": "number",
+          "label": {
+            "en": "Drop (€)",
+            "fr": "Baisse (€)",
+            "de": "Rückgang (€)",
+            "es": "Bajada (€)"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "fuel_prices",
+      "label": {
+        "en": "Fuel prices",
+        "fr": "Prix des carburants",
+        "de": "Kraftstoffpreise",
+        "es": "Precios de carburantes"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "The prices of a station, or the cheapest around the house, per fuel followed.",
+        "fr": "Les prix d’une station, ou les moins chers autour de la maison, par carburant suivi.",
+        "de": "Die Preise einer Tankstelle oder die günstigsten ums Haus, je verfolgtem Kraftstoff.",
+        "es": "Los precios de una gasolinera, o los más baratos cerca de casa, por carburante seguido."
+      },
+      "icon": "droplet",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Station or cheapest device",
+            "fr": "Station ou appareil du moins cher",
+            "de": "Tankstelle oder Gerät des günstigsten Preises",
+            "es": "Gasolinera o dispositivo del más barato"
+          },
+          "description": {
+            "en": "Empty: the cheapest around the house.",
+            "fr": "Vide : les moins chers autour de la maison.",
+            "de": "Leer: die günstigsten ums Haus.",
+            "es": "Vacío: los más baratos cerca de casa."
+          },
+          "required": false
+        },
+        {
+          "key": "show_details",
+          "type": "boolean",
+          "label": {
+            "en": "Show the details",
+            "fr": "Afficher les détails",
+            "de": "Details anzeigen",
+            "es": "Mostrar los detalles"
+          },
+          "description": {
+            "en": "Station and distance of each cheapest price, or the opening hours.",
+            "fr": "Station et distance de chaque prix le plus bas, ou les horaires.",
+            "de": "Tankstelle und Entfernung jedes günstigsten Preises oder die Öffnungszeiten.",
+            "es": "Gasolinera y distancia de cada precio más bajo, o el horario."
+          },
+          "required": false,
+          "default": true
+        }
+      ]
     }
   ]
 }

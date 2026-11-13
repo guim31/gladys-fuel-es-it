@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-13
+
 ### Added
 
 - Fuel prices at the stations of Spain (Ministry for the Ecological Transition, every 30 minutes)
@@ -22,3 +24,6 @@ the notes of the version's GitHub Release.
 - A "Fuel price drop" scene trigger and a "Fuel prices" dashboard widget.
 - A "Test the official price list" action.
 - Texts and documentation in English, French, German and Spanish.
+
+[Unreleased]: https://github.com/guim31/gladys-fuel-es-it/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-fuel-es-it/releases/tag/v1.0.0

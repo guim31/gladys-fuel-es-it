@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
+  "name": "gladys-fuel-es-it",
   "version": "1.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "Fuel prices at the stations of Spain and Italy, from the official open data, for Gladys Assistant.",
   "type": "module",
   "main": "index.js",
   "scripts": {

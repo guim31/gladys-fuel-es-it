@@ -32,15 +32,20 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/app.js                        the integration: house, timer, reads, states, trigger, widget, action
+src/spain.js                      Spanish Ministry REST client: full list / provinces, in a stream
+src/italy.js                      MIMIT CSV client: registry + prices, in a stream, with ETags
+src/stream.js                     stream splitters: text lines, objects of a JSON array
+src/geo.js                        selection (radius, municipality, devices added), parsers, distance
+src/devices.js                    station and cheapest devices, their states, the cheapest per fuel
+src/fuels.js                      the fuels of each country (keys forever) and their source names
+src/widgets.js                    dashboard widget `fuel_prices`
+src/i18n.js                       every text in en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/store.js, src/issues.js       /data persistence (last prices, for the trigger); failures logged once
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (mandatory)
+test/                             node --test, against the SDK's fake Gladys and fake sources
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -214,6 +219,29 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## Cette intégration : carburants Espagne et Italie
+
+- **Espagne** : `…/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/` (toutes, 12 Mo,
+  ≈ 11 500 stations, 10 à 15 s) et `…/FiltroProvincia/<IDProvincia>` (≈ 1 Mo). JSON à virgules
+  décimales, champs vides pour un carburant non vendu, `Fecha` à barres **échappées** (`12\/11\/2026`) :
+  la lire par `JSON.parse` de la chaîne, pas par une regex naïve. Pas d'ETag ni de HEAD (405). `Tipo
+Venta` `R` = station réservée aux sociétaires : jamais « la moins chère ».
+- **Italie** : `anagrafica_impianti_attivi.csv` et `prezzo_alle_8.csv` sur `www.mimit.gov.it/images/exportCSV/`,
+  séparateur `|`, première ligne `Estrazione del AAAA-MM-JJ` puis l'en-tête. Une centaine de lignes du
+  registre ont un `|` **dans le nom** : lire les champs par les deux bouts, ancrés sur `Tipo Impianto`.
+  ≈ 110 stations sans position (0 ou vide), quelques positions fausses (source). ETag fiable (304).
+  Prix de la veille à 8 h. GPL et méthane : le plus bas des deux modes. Méthane au kg.
+- L'API de recherche du site Osservaprezzi (`carburanti.mise.gov.it/ospzApi/search/zone`, POST) répondait sans
+  protection le 12/11/2026 avec des prix du jour, mais n'est pas documentée : non utilisée.
+- Lecture en flux (`src/stream.js`) : ≈ 100 Mo de RSS au pic d'une lecture complète. Ne jamais faire
+  `response.json()` sur la liste espagnole complète.
+- Position : `getHouses()` (5.2.0+, `location: true`), première maison placée. Les champs `number` ne
+  prennent pas de décimales : pas de latitude/longitude saisies.
+- Le SDK n'a pas de constante `DEVICE_FEATURE_TYPES.DISTANCE_SENSOR` : `'decimal'` en dur
+  (`distance-sensor/decimal` existe dans le cœur).
+- Clés figées : `station:es-<IDEESS>` / `station:it-<idImpianto>`, `cheapest:<es|it>`, fonctionnalités
+  `<carburant>_price|_station|_distance`, `updated`, `hours` ; carburants de `src/fuels.js`.
 
 ## Store
 
